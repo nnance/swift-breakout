@@ -17,9 +17,17 @@ func paddleFactory(rect: CGRect) -> SKNode {
     return paddle
 }
 
+func ballFactory(rect: CGRect) -> SKNode {
+    let ball = SKShapeNode(circleOfRadius: CGFloat(10))
+    ball.position = CGPoint(x: -100, y: -100)
+    ball.fillColor = UIColor.white
+    return ball
+}
+
 func sceneFactory(rect: CGRect) -> [SKNode] {
     return [
-        paddleFactory(rect: rect)
+        paddleFactory(rect: rect),
+        ballFactory(rect: rect)
     ]
 }
 
