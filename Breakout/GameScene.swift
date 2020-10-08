@@ -19,8 +19,18 @@ func paddleFactory(rect: CGRect) -> SKNode {
 
 func ballFactory(rect: CGRect) -> SKNode {
     let ball = SKShapeNode(circleOfRadius: CGFloat(10))
+    ball.name = "ball"
     ball.position = CGPoint(x: -100, y: -100)
     ball.fillColor = UIColor.white
+    
+    ball.physicsBody = SKPhysicsBody(circleOfRadius: CGFloat(10))
+    ball.physicsBody?.allowsRotation = false
+    ball.physicsBody?.affectedByGravity = false
+    ball.physicsBody?.friction = 0
+    ball.physicsBody?.restitution = 1
+    ball.physicsBody?.linearDamping = 0
+    ball.physicsBody?.angularDamping = 0
+    
     return ball
 }
 
@@ -36,6 +46,16 @@ class GameScene: SKScene {
     override func didMove(to view: SKView) {
         let nodes = sceneFactory(rect: self.frame)
         nodes.forEach{ self.addChild($0) }
+        
+        let ball = self.childNode(withName: "ball") as! SKShapeNode
+        ball.physicsBody?.applyImpulse(CGVector(dx: 10, dy: 10))
+        
+        let border = SKPhysicsBody(edgeLoopFrom: self.frame)
+        
+        border.friction = 0
+        border.restitution = 1
+        
+        self.physicsBody = border
     }
     
     func touchDown(atPoint pos : CGPoint) {
