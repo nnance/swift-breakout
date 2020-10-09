@@ -16,6 +16,7 @@ let brickWidth = 54
 let brickHeight = 20
 let brickSpacing = 4
 let wallOffset = 200
+let ballSpeed = CGVector(dx: 10, dy: 10)
 
 func paddleFactory(rect: CGRect) -> SKNode {
     let size = CGSize(width: paddleWidth, height: paddleHeight)
@@ -115,7 +116,7 @@ class GameScene: SKScene {
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         let ball = self.childNode(withName: "ball") as! SKShapeNode
-        ball.physicsBody?.applyImpulse(CGVector(dx: 10, dy: 10))
+        ball.physicsBody?.applyImpulse(ballSpeed)
     }
     
     override func update(_ currentTime: TimeInterval) {
