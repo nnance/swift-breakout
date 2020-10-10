@@ -10,27 +10,36 @@ import SpriteKit
 import GameplayKit
 
 // game constants to easily adjust game settings
-let paddleWidth = 80
-let paddleHeight = 20
-let brickWidth = 54
-let brickHeight = 20
+let paddleSize = CGSize(width: 80, height: 20)
+let brickSize = CGSize(width: 54, height: 20)
 let brickSpacing = 4
 let wallOffset = 200
 let ballSpeed = CGVector(dx: 10, dy: 10)
 
+enum ColliderType: UInt32 {
+    case Ball = 1
+    case Paddle = 2
+    case Brick = 4
+}
+
+func setCollision(node: SKNode, category: ColliderType, collision: ColliderType) {
+    node.physicsBody?.categoryBitMask = category.rawValue
+    node.physicsBody?.contactTestBitMask = collision.rawValue
+    node.physicsBody?.collisionBitMask = collision.rawValue
+}
+
 func paddleFactory(rect: CGRect) -> SKNode {
-    let size = CGSize(width: paddleWidth, height: paddleHeight)
-    let paddle = SKShapeNode(rectOf: size)
+    let paddle = SKShapeNode(rectOf: paddleSize)
     paddle.position = CGPoint(x: 0, y: -rect.maxY + 150)
     paddle.fillColor = UIColor.white
     
-    paddle.physicsBody = SKPhysicsBody(rectangleOf: size)
+    paddle.physicsBody = SKPhysicsBody(rectangleOf: paddleSize)
     paddle.physicsBody?.isDynamic = false
     paddle.physicsBody?.allowsRotation = false
     paddle.physicsBody?.affectedByGravity = false
     paddle.physicsBody?.friction = 0
     paddle.physicsBody?.restitution = 0
-
+    
     return paddle
 }
 
@@ -48,30 +57,35 @@ func ballFactory() -> SKNode {
     ball.physicsBody?.linearDamping = 0
     ball.physicsBody?.angularDamping = 0
     
+    setCollision(node: ball, category: ColliderType.Ball, collision: ColliderType.Brick)
+    
     return ball
 }
 
 func brickFactory(pos: CGPoint, color: UIColor) -> SKNode {
-    let size = CGSize(width: brickWidth, height: brickHeight)
-    let brick = SKShapeNode(rectOf: size)
+    let brick = SKShapeNode(rectOf: brickSize)
     brick.position = pos
     brick.fillColor = color
     brick.strokeColor = color
     
-    brick.physicsBody = SKPhysicsBody(rectangleOf: size)
+    brick.physicsBody = SKPhysicsBody(rectangleOf: brickSize)
     brick.physicsBody?.isDynamic = false
     brick.physicsBody?.allowsRotation = false
     brick.physicsBody?.affectedByGravity = false
     brick.physicsBody?.friction = 0
     brick.physicsBody?.restitution = 0
 
+    setCollision(node: brick, category: ColliderType.Brick, collision: ColliderType.Ball)
+    
     return brick
-
 }
 
 //TODO: adjust brick width based on device width
 func rowFactory(rect: CGRect, row: Int, color: UIColor) -> [SKNode] {
     var bricks: [SKNode] = []
+    
+    let brickWidth = Int(brickSize.width)
+    let brickHeight = Int(brickSize.height)
     
     for idx in 0...12 {
         let x = -rect.maxX + CGFloat(brickWidth * idx + brickSpacing * idx + brickWidth / 2)
@@ -100,9 +114,9 @@ func sceneFactory(rect: CGRect) -> [SKNode] {
     ] + rows.flatMap{ $0 }
 }
 
-class GameScene: SKScene {
+class GameScene: SKScene, SKPhysicsContactDelegate {
     
-    override func didMove(to view: SKView) {
+    func setupGame() {
         let nodes = sceneFactory(rect: self.frame)
         nodes.forEach{ self.addChild($0) }
         
@@ -114,11 +128,25 @@ class GameScene: SKScene {
         self.physicsBody = border
     }
     
+    override func didMove(to view: SKView) {
+        self.physicsWorld.contactDelegate = self
+        setupGame()
+    }
+    
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         let ball = self.childNode(withName: "ball") as! SKShapeNode
         ball.physicsBody?.applyImpulse(ballSpeed)
     }
     
+    func didBegin(_ contact: SKPhysicsContact) {
+        if contact.bodyA.categoryBitMask == ColliderType.Brick.rawValue {
+            contact.bodyA.node!.removeFromParent()
+        }
+        else if contact.bodyB.categoryBitMask == ColliderType.Brick.rawValue {
+            contact.bodyB.node!.removeFromParent()
+        }
+    }
+
     override func update(_ currentTime: TimeInterval) {
         // Called before each frame is rendered
     }
