@@ -96,6 +96,16 @@ func rowFactory(rect: CGRect, row: Int, color: UIColor) -> [SKNode] {
     return bricks
 }
 
+func scoreFactory(rect: CGRect) -> SKLabelNode {
+    let scoreLabel = SKLabelNode()
+    scoreLabel.name = "score"
+    scoreLabel.fontName = "Helvetica"
+    scoreLabel.fontSize = 60
+    scoreLabel.text = "0"
+    scoreLabel.position = CGPoint(x: rect.midX, y: rect.height / 2 - 100)
+    return scoreLabel
+}
+
 func sceneFactory(rect: CGRect) -> [SKNode] {
     let rows = [
         rowFactory(rect: rect, row: 1, color: UIColor.red),
@@ -110,11 +120,24 @@ func sceneFactory(rect: CGRect) -> [SKNode] {
     
     return [
         paddleFactory(rect: rect),
-        ballFactory()
+        ballFactory(),
+        scoreFactory(rect: rect)
     ] + rows.flatMap{ $0 }
 }
 
+func calcScore(node: SKShapeNode) -> Int {
+    return node.fillColor == UIColor.yellow
+        ? 1
+        : node.fillColor == UIColor.green
+        ? 3
+        : node.fillColor == UIColor.orange
+        ? 5
+        : 7  // red
+}
+
 class GameScene: SKScene, SKPhysicsContactDelegate {
+    
+    var score = 0
     
     func setupGame() {
         let nodes = sceneFactory(rect: self.frame)
@@ -140,14 +163,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func didBegin(_ contact: SKPhysicsContact) {
         if contact.bodyA.categoryBitMask == ColliderType.Brick.rawValue {
+            score += calcScore(node: contact.bodyA.node! as! SKShapeNode)
             contact.bodyA.node!.removeFromParent()
         }
         else if contact.bodyB.categoryBitMask == ColliderType.Brick.rawValue {
+            score += calcScore(node: contact.bodyB.node! as! SKShapeNode)
             contact.bodyB.node!.removeFromParent()
         }
     }
 
     override func update(_ currentTime: TimeInterval) {
-        // Called before each frame is rendered
+        let scoreNode = self.childNode(withName: "score") as! SKLabelNode
+        scoreNode.text = String(score)
     }
 }
