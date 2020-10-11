@@ -30,6 +30,7 @@ func setCollision(node: SKNode, category: ColliderType, collision: ColliderType)
 
 func paddleFactory(rect: CGRect) -> SKNode {
     let paddle = SKShapeNode(rectOf: paddleSize)
+    paddle.name = "paddle"
     paddle.position = CGPoint(x: 0, y: -rect.maxY + 150)
     paddle.fillColor = UIColor.white
     
@@ -153,21 +154,24 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         self.physicsBody = border
     }
     
+    func startGame() {
+        let ball = self.childNode(withName: "ball") as! SKShapeNode
+        ball.physicsBody?.applyImpulse(ballSpeed)
+        started = true
+    }
+    
+    func touchMoved(toPoint pos : CGPoint) {
+        let paddle = self.childNode(withName: "paddle") as! SKShapeNode
+        paddle.position.x = pos.x
+    }
+    
+    func moveWithTouches(touches: Set<UITouch>) {
+        for t in touches { self.touchMoved(toPoint: t.location(in: self)) }
+    }
+    
     override func didMove(to view: SKView) {
         self.physicsWorld.contactDelegate = self
         setupGame()
-    }
-    
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if (!started) {
-            let ball = self.childNode(withName: "ball") as! SKShapeNode
-            ball.physicsBody?.applyImpulse(ballSpeed)
-            started = true
-        }
-    }
-    
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        
     }
     
     func didBegin(_ contact: SKPhysicsContact) {
@@ -183,6 +187,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
     }
 
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if (!started) {
+            startGame()
+        } else {
+            moveWithTouches(touches: touches)
+        }
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        moveWithTouches(touches: touches)
+    }
+    
     override func update(_ currentTime: TimeInterval) {
         let scoreNode = self.childNode(withName: "score") as! SKLabelNode
         scoreNode.text = String(score)
