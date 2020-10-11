@@ -29,38 +29,71 @@ func setCollision(node: SKNode, category: ColliderType, collision: ColliderType)
 }
 
 func paddleFactory(rect: CGRect) -> SKNode {
+    let physicsBody = SKPhysicsBody(rectangleOf: paddleSize)
+    physicsBody.isDynamic = false
+    physicsBody.allowsRotation = false
+    physicsBody.affectedByGravity = false
+    physicsBody.friction = 0
+    physicsBody.restitution = 0
+    
     let paddle = SKShapeNode(rectOf: paddleSize)
     paddle.name = "paddle"
     paddle.position = CGPoint(x: 0, y: -rect.maxY + 150)
     paddle.fillColor = UIColor.white
-    
-    paddle.physicsBody = SKPhysicsBody(rectangleOf: paddleSize)
-    paddle.physicsBody?.isDynamic = false
-    paddle.physicsBody?.allowsRotation = false
-    paddle.physicsBody?.affectedByGravity = false
-    paddle.physicsBody?.friction = 0
-    paddle.physicsBody?.restitution = 0
+    paddle.physicsBody = physicsBody
     
     return paddle
 }
 
 func ballFactory() -> SKNode {
+    let physicsBody = SKPhysicsBody(circleOfRadius: CGFloat(10))
+    physicsBody.allowsRotation = false
+    physicsBody.affectedByGravity = false
+    physicsBody.friction = 0
+    physicsBody.restitution = 1
+    physicsBody.linearDamping = 0
+    physicsBody.angularDamping = 0
+    
     let ball = SKShapeNode(circleOfRadius: CGFloat(10))
     ball.name = "ball"
     ball.position = CGPoint(x: -100, y: -100)
     ball.fillColor = UIColor.white
-    
-    ball.physicsBody = SKPhysicsBody(circleOfRadius: CGFloat(10))
-    ball.physicsBody?.allowsRotation = false
-    ball.physicsBody?.affectedByGravity = false
-    ball.physicsBody?.friction = 0
-    ball.physicsBody?.restitution = 1
-    ball.physicsBody?.linearDamping = 0
-    ball.physicsBody?.angularDamping = 0
+    ball.physicsBody = physicsBody
     
     setCollision(node: ball, category: ColliderType.Ball, collision: ColliderType.Brick)
     
     return ball
+}
+
+func wallFactory(rect: CGRect) -> SKShapeNode {
+    let physicsBody = SKPhysicsBody(edgeLoopFrom: rect)
+    physicsBody.isDynamic = false
+    physicsBody.allowsRotation = false
+    physicsBody.affectedByGravity = false
+    physicsBody.friction = 0
+    physicsBody.restitution = 1
+    physicsBody.linearDamping = 0
+    physicsBody.angularDamping = 0
+
+    let wall = SKShapeNode(rect: rect)
+    wall.physicsBody = physicsBody
+
+    return wall
+}
+
+func leftWallFactory(rect: CGRect) -> SKShapeNode {
+    let rect = CGRect(x: rect.minX, y: rect.maxY, width: 1, height: rect.minY * 2)
+    return wallFactory(rect: rect)
+}
+
+func rightWallFactory(rect: CGRect) -> SKShapeNode {
+    let rect = CGRect(x: rect.maxX, y: rect.maxY, width: 1, height: rect.minY * 2)
+    return wallFactory(rect: rect)
+}
+
+func topWallFactory(rect: CGRect) -> SKShapeNode {
+    let rect = CGRect(x: rect.minX, y: rect.maxY, width: rect.maxX * 2, height: 1)
+    return wallFactory(rect: rect)
 }
 
 func brickFactory(pos: CGPoint, color: UIColor) -> SKNode {
@@ -119,11 +152,16 @@ func sceneFactory(rect: CGRect) -> [SKNode] {
         rowFactory(rect: rect, row: 8, color: UIColor.yellow)
     ]
     
-    return [
+    let nodes = [
+        leftWallFactory(rect: rect),
+        rightWallFactory(rect: rect),
+        topWallFactory(rect: rect),
         paddleFactory(rect: rect),
         ballFactory(),
         scoreFactory(rect: rect)
-    ] + rows.flatMap{ $0 }
+    ]
+
+    return nodes + rows.flatMap{ $0 }
 }
 
 func calcScore(node: SKShapeNode) -> Int {
@@ -145,13 +183,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     func setupGame() {
         let nodes = sceneFactory(rect: self.frame)
         nodes.forEach{ self.addChild($0) }
-        
-        let border = SKPhysicsBody(edgeLoopFrom: self.frame)
-        
-        border.friction = 0
-        border.restitution = 1
-        
-        self.physicsBody = border
     }
     
     func startGame() {
