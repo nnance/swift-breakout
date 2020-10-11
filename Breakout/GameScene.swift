@@ -137,7 +137,9 @@ func calcScore(node: SKShapeNode) -> Int {
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
     
+    var started = false
     var score = 0
+    var gameOver = false
     
     func setupGame() {
         let nodes = sceneFactory(rect: self.frame)
@@ -157,18 +159,27 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        let ball = self.childNode(withName: "ball") as! SKShapeNode
-        ball.physicsBody?.applyImpulse(ballSpeed)
+        if (!started) {
+            let ball = self.childNode(withName: "ball") as! SKShapeNode
+            ball.physicsBody?.applyImpulse(ballSpeed)
+            started = true
+        }
+    }
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        
     }
     
     func didBegin(_ contact: SKPhysicsContact) {
-        if contact.bodyA.categoryBitMask == ColliderType.Brick.rawValue {
-            score += calcScore(node: contact.bodyA.node! as! SKShapeNode)
+        let node = contact.bodyA.categoryBitMask == ColliderType.Brick.rawValue
+            ? contact.bodyA.node! as? SKShapeNode
+            : contact.bodyB.categoryBitMask == ColliderType.Brick.rawValue
+            ? contact.bodyB.node! as? SKShapeNode
+            : nil
+        
+        if (node != nil) {
+            score += calcScore(node: node!)
             contact.bodyA.node!.removeFromParent()
-        }
-        else if contact.bodyB.categoryBitMask == ColliderType.Brick.rawValue {
-            score += calcScore(node: contact.bodyB.node! as! SKShapeNode)
-            contact.bodyB.node!.removeFromParent()
         }
     }
 
