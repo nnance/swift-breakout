@@ -15,11 +15,13 @@ let brickSize = CGSize(width: 54, height: 20)
 let brickSpacing = 4
 let wallOffset = 200
 let ballSpeed = CGVector(dx: 10, dy: 10)
+let ballStart = CGPoint(x: -100, y: -100)
 
 enum ColliderType: UInt32 {
     case Ball = 1
     case Paddle = 2
     case Brick = 4
+    case Gap = 8
 }
 
 func setCollision(node: SKNode, category: ColliderType, collision: ColliderType) {
@@ -56,7 +58,7 @@ func ballFactory() -> SKNode {
     
     let ball = SKShapeNode(circleOfRadius: CGFloat(10))
     ball.name = "ball"
-    ball.position = CGPoint(x: -100, y: -100)
+    ball.position = ballStart
     ball.fillColor = UIColor.white
     ball.physicsBody = physicsBody
     
@@ -94,6 +96,23 @@ func rightWallFactory(rect: CGRect) -> SKShapeNode {
 func topWallFactory(rect: CGRect) -> SKShapeNode {
     let rect = CGRect(x: rect.minX, y: rect.maxY, width: rect.maxX * 2, height: 1)
     return wallFactory(rect: rect)
+}
+
+func bottomWallFactory(rect: CGRect) -> SKNode {
+    let point = CGPoint(x: rect.minX, y: rect.minY)
+    let size = CGSize(width: rect.maxX * 2, height: 1)
+    
+    let physicsBody = SKPhysicsBody(rectangleOf: size)
+    physicsBody.isDynamic = false
+    physicsBody.categoryBitMask = ColliderType.Gap.rawValue
+    physicsBody.contactTestBitMask = ColliderType.Ball.rawValue
+    physicsBody.collisionBitMask = ColliderType.Ball.rawValue
+    
+    let wall = SKNode()
+    wall.position = point
+    wall.physicsBody = physicsBody
+
+    return wall
 }
 
 func brickFactory(pos: CGPoint, color: UIColor) -> SKNode {
@@ -156,6 +175,7 @@ func sceneFactory(rect: CGRect) -> [SKNode] {
         leftWallFactory(rect: rect),
         rightWallFactory(rect: rect),
         topWallFactory(rect: rect),
+        bottomWallFactory(rect: rect),
         paddleFactory(rect: rect),
         ballFactory(),
         scoreFactory(rect: rect)
@@ -178,7 +198,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     var started = false
     var score = 0
-    var gameOver = false
     
     func setupGame() {
         let nodes = sceneFactory(rect: self.frame)
@@ -186,14 +205,15 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     func startGame() {
-        let ball = self.childNode(withName: "ball") as! SKShapeNode
-        ball.physicsBody?.applyImpulse(ballSpeed)
+        let ball = self.childNode(withName: "ball")
+        ball?.position = ballStart
+        ball?.physicsBody?.applyImpulse(ballSpeed)
         started = true
     }
     
     func touchMoved(toPoint pos : CGPoint) {
-        let paddle = self.childNode(withName: "paddle") as! SKShapeNode
-        paddle.position.x = pos.x
+        let paddle = self.childNode(withName: "paddle")
+        paddle?.position.x = pos.x
     }
     
     func moveWithTouches(touches: Set<UITouch>) {
@@ -206,15 +226,36 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     func didBegin(_ contact: SKPhysicsContact) {
-        let node = contact.bodyA.categoryBitMask == ColliderType.Brick.rawValue
+
+        let brick = contact.bodyA.categoryBitMask == ColliderType.Brick.rawValue
             ? contact.bodyA.node! as? SKShapeNode
             : contact.bodyB.categoryBitMask == ColliderType.Brick.rawValue
             ? contact.bodyB.node! as? SKShapeNode
             : nil
         
-        if (node != nil) {
-            score += calcScore(node: node!)
-            contact.bodyA.node!.removeFromParent()
+        if (brick != nil) {
+            score += calcScore(node: brick!)
+            brick!.removeFromParent()
+        }
+
+        let gap = contact.bodyA.categoryBitMask == ColliderType.Gap.rawValue
+            ? contact.bodyA.node
+            : contact.bodyB.categoryBitMask == ColliderType.Gap.rawValue
+            ? contact.bodyB.node
+            : nil
+        
+        if (gap != nil) {
+            self.started = false
+            
+            let ball = self.childNode(withName: "ball")
+            ball?.physicsBody?.velocity = CGVector(dx: 0, dy: 0)
+            
+            let gameOverLabel = SKLabelNode()
+            gameOverLabel.fontName = "Helvetica"
+            gameOverLabel.fontSize = 30
+            gameOverLabel.text = "Game Over! Tap to play again."
+            gameOverLabel.position = CGPoint(x: self.frame.midX, y: self.frame.midY)
+            self.addChild(gameOverLabel)
         }
     }
 
