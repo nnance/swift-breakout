@@ -184,6 +184,24 @@ func sceneFactory(rect: CGRect) -> [SKNode] {
     return nodes + rows.flatMap{ $0 }
 }
 
+func messageFactory(rect: CGRect, text: String) -> SKNode {
+    let label = SKLabelNode()
+    label.name = "message"
+    label.fontName = "Helvetica"
+    label.fontSize = 30
+    label.text = text
+    label.position = CGPoint(x: rect.midX, y: rect.midY)
+    return label
+}
+
+func turnOverFactory(rect: CGRect) -> SKNode {
+    return messageFactory(rect: rect, text: "Turn ended! Tap to try again.")
+}
+
+func gameOverFactory(rect: CGRect) -> SKNode {
+    return messageFactory(rect: rect, text: "Game Over! Tap to play again.")
+}
+
 func calcScore(node: SKShapeNode) -> Int {
     return node.fillColor == UIColor.yellow
         ? 1
@@ -197,9 +215,15 @@ func calcScore(node: SKShapeNode) -> Int {
 class GameScene: SKScene, SKPhysicsContactDelegate {
     
     var started = false
+    var turnsLeft = 3
     var score = 0
+    var gameOver = false
     
     func setupGame() {
+        self.turnsLeft = 3
+        self.score = 0
+        self.gameOver = false
+        
         let nodes = sceneFactory(rect: self.frame)
         nodes.forEach{ self.addChild($0) }
     }
@@ -208,7 +232,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let ball = self.childNode(withName: "ball")
         ball?.position = ballStart
         ball?.physicsBody?.applyImpulse(ballSpeed)
-        started = true
+        
+        let label = self.childNode(withName: "message")
+        label?.removeFromParent()
+        
+        self.started = true
+    }
+    
+    func resetGame() {
+        self.removeAllChildren()
+        setupGame()
+        startGame()
     }
     
     func touchMoved(toPoint pos : CGPoint) {
@@ -235,7 +269,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         if (brick != nil) {
             score += calcScore(node: brick!)
-            brick!.removeFromParent()
+            brick?.removeFromParent()
         }
 
         let gap = contact.bodyA.categoryBitMask == ColliderType.Gap.rawValue
@@ -246,25 +280,30 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         if (gap != nil) {
             self.started = false
-            
+
+            // stop the ball
             let ball = self.childNode(withName: "ball")
             ball?.physicsBody?.velocity = CGVector(dx: 0, dy: 0)
             
-            let gameOverLabel = SKLabelNode()
-            gameOverLabel.fontName = "Helvetica"
-            gameOverLabel.fontSize = 30
-            gameOverLabel.text = "Game Over! Tap to play again."
-            gameOverLabel.position = CGPoint(x: self.frame.midX, y: self.frame.midY)
-            self.addChild(gameOverLabel)
+            self.gameOver = turnsLeft == 1
+            
+            let label = self.gameOver ? gameOverFactory(rect: self.frame) : turnOverFactory(rect: self.frame)
+            self.addChild(label)
+
+            self.turnsLeft -= 1
         }
     }
 
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if (!started) {
-            startGame()
+        if (!self.gameOver) {
+            if (!self.started) {
+                startGame()
+            } else {
+                moveWithTouches(touches: touches)
+            }
         } else {
-            moveWithTouches(touches: touches)
+            resetGame()
         }
     }
 
