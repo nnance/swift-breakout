@@ -10,6 +10,7 @@ import SpriteKit
 import GameplayKit
 
 // game constants to easily adjust game settings
+let showPhysics = false
 let paddleSize = CGSize(width: 80, height: 20)
 let brickSize = CGSize(width: 54, height: 20)
 let brickSpacing = 4
@@ -99,17 +100,15 @@ func topWallFactory(rect: CGRect) -> SKShapeNode {
 }
 
 func bottomWallFactory(rect: CGRect) -> SKNode {
-    let point = CGPoint(x: rect.minX, y: rect.minY)
-    let size = CGSize(width: rect.maxX * 2, height: 1)
+    let rect = CGRect(x: rect.minX, y: rect.minY, width: rect.maxX * 2, height: 1)
     
-    let physicsBody = SKPhysicsBody(rectangleOf: size)
+    let physicsBody = SKPhysicsBody(edgeLoopFrom: rect)
     physicsBody.isDynamic = false
     physicsBody.categoryBitMask = ColliderType.Gap.rawValue
     physicsBody.contactTestBitMask = ColliderType.Ball.rawValue
     physicsBody.collisionBitMask = ColliderType.Ball.rawValue
     
-    let wall = SKNode()
-    wall.position = point
+    let wall = SKShapeNode(rect: rect)
     wall.physicsBody = physicsBody
 
     return wall
@@ -257,6 +256,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     override func didMove(to view: SKView) {
+        self.view?.showsPhysics = showPhysics
         self.physicsWorld.contactDelegate = self
         setupGame()
     }
