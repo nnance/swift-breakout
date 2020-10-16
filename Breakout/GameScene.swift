@@ -212,17 +212,19 @@ func calcScore(node: SKShapeNode) -> Int {
         : 7  // red
 }
 
-class GameScene: SKScene, SKPhysicsContactDelegate {
-    
+struct GameState {
     var started = false
+    var gameOver = false
     var turnsLeft = 3
     var score = 0
-    var gameOver = false
+}
+
+class GameScene: SKScene, SKPhysicsContactDelegate {
+    
+    var game = GameState()
     
     func setupGame() {
-        self.turnsLeft = 3
-        self.score = 0
-        self.gameOver = false
+        self.game = GameState()
         
         let nodes = sceneFactory(rect: self.frame)
         nodes.forEach{ self.addChild($0) }
@@ -236,7 +238,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let label = self.childNode(withName: "message")
         label?.removeFromParent()
         
-        self.started = true
+        self.game.started = true
     }
     
     func resetGame() {
@@ -245,13 +247,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         startGame()
     }
     
-    func touchMoved(toPoint pos : CGPoint) {
-        let paddle = self.childNode(withName: "paddle")
-        paddle?.position.x = pos.x
-    }
-    
     func moveWithTouches(touches: Set<UITouch>) {
-        for t in touches { self.touchMoved(toPoint: t.location(in: self)) }
+        for t in touches {
+            let pos = t.location(in: self)
+
+            let paddle = self.childNode(withName: "paddle")
+            paddle?.position.x = pos.x
+        }
     }
     
     override func didMove(to view: SKView) {
@@ -268,7 +270,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             : nil
         
         if (brick != nil) {
-            score += calcScore(node: brick!)
+            self.game.score += calcScore(node: brick!)
             brick?.removeFromParent()
         }
 
@@ -279,25 +281,27 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             : nil
         
         if (gap != nil) {
-            self.started = false
+            self.game.started = false
 
             // stop the ball
             let ball = self.childNode(withName: "ball")
             ball?.physicsBody?.velocity = CGVector(dx: 0, dy: 0)
             
-            self.gameOver = turnsLeft == 1
+            self.game.gameOver = self.game.turnsLeft == 1
             
-            let label = self.gameOver ? gameOverFactory(rect: self.frame) : turnOverFactory(rect: self.frame)
+            let label = self.game.gameOver
+                ? gameOverFactory(rect: self.frame)
+                : turnOverFactory(rect: self.frame)
             self.addChild(label)
 
-            self.turnsLeft -= 1
+            self.game.turnsLeft -= 1
         }
     }
 
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if (!self.gameOver) {
-            if (!self.started) {
+        if (!self.game.gameOver) {
+            if (!self.game.started) {
                 startGame()
             } else {
                 moveWithTouches(touches: touches)
@@ -313,6 +317,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     override func update(_ currentTime: TimeInterval) {
         let scoreNode = self.childNode(withName: "score") as! SKLabelNode
-        scoreNode.text = String(score)
+        scoreNode.text = String(self.game.score)
     }
 }
