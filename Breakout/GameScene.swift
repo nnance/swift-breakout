@@ -31,7 +31,7 @@ func setCollision(node: SKNode, category: ColliderType, collision: ColliderType)
     node.physicsBody?.collisionBitMask = collision.rawValue
 }
 
-func paddleFactory(rect: CGRect) -> SKNode {
+func paddleFactory(_ rect: CGRect) -> SKNode {
     let physicsBody = SKPhysicsBody(rectangleOf: paddleSize)
     physicsBody.isDynamic = false
     physicsBody.allowsRotation = false
@@ -68,7 +68,7 @@ func ballFactory() -> SKNode {
     return ball
 }
 
-func wallFactory(rect: CGRect) -> SKShapeNode {
+func wallFactory(_ rect: CGRect) -> SKShapeNode {
     let physicsBody = SKPhysicsBody(edgeLoopFrom: rect)
     physicsBody.isDynamic = false
     physicsBody.allowsRotation = false
@@ -84,22 +84,22 @@ func wallFactory(rect: CGRect) -> SKShapeNode {
     return wall
 }
 
-func leftWallFactory(rect: CGRect) -> SKShapeNode {
+func leftWallFactory(_ rect: CGRect) -> SKShapeNode {
     let rect = CGRect(x: rect.minX, y: rect.maxY, width: 1, height: rect.minY * 2)
-    return wallFactory(rect: rect)
+    return wallFactory(rect)
 }
 
-func rightWallFactory(rect: CGRect) -> SKShapeNode {
+func rightWallFactory(_ rect: CGRect) -> SKShapeNode {
     let rect = CGRect(x: rect.maxX, y: rect.maxY, width: 1, height: rect.minY * 2)
-    return wallFactory(rect: rect)
+    return wallFactory(rect)
 }
 
-func topWallFactory(rect: CGRect) -> SKShapeNode {
+func topWallFactory(_ rect: CGRect) -> SKShapeNode {
     let rect = CGRect(x: rect.minX, y: rect.maxY, width: rect.maxX * 2, height: 1)
-    return wallFactory(rect: rect)
+    return wallFactory(rect)
 }
 
-func bottomWallFactory(rect: CGRect) -> SKNode {
+func bottomWallFactory(_ rect: CGRect) -> SKNode {
     let rect = CGRect(x: rect.minX, y: rect.minY, width: rect.maxX * 2, height: 1)
     
     let physicsBody = SKPhysicsBody(edgeLoopFrom: rect)
@@ -148,7 +148,7 @@ func rowFactory(rect: CGRect, row: Int, color: UIColor) -> [SKNode] {
     return bricks
 }
 
-func scoreFactory(rect: CGRect) -> SKLabelNode {
+func scoreFactory(_ rect: CGRect) -> SKLabelNode {
     let scoreLabel = SKLabelNode()
     scoreLabel.name = "score"
     scoreLabel.fontName = "Helvetica"
@@ -158,7 +158,7 @@ func scoreFactory(rect: CGRect) -> SKLabelNode {
     return scoreLabel
 }
 
-func sceneFactory(rect: CGRect) -> [SKNode] {
+func sceneFactory(_ rect: CGRect) -> [SKNode] {
     let rows = [
         rowFactory(rect: rect, row: 1, color: UIColor.red),
         rowFactory(rect: rect, row: 2, color: UIColor.red),
@@ -171,13 +171,12 @@ func sceneFactory(rect: CGRect) -> [SKNode] {
     ]
     
     let nodes = [
-        leftWallFactory(rect: rect),
-        rightWallFactory(rect: rect),
-        topWallFactory(rect: rect),
-        bottomWallFactory(rect: rect),
-        paddleFactory(rect: rect),
-        ballFactory(),
-        scoreFactory(rect: rect)
+        leftWallFactory(rect),
+        rightWallFactory(rect),
+        topWallFactory(rect),
+        bottomWallFactory(rect),
+        paddleFactory(rect),
+        scoreFactory(rect)
     ]
 
     return nodes + rows.flatMap{ $0 }
@@ -193,15 +192,15 @@ func messageFactory(rect: CGRect, text: String) -> SKNode {
     return label
 }
 
-func turnOverFactory(rect: CGRect) -> SKNode {
+func turnOverFactory(_ rect: CGRect) -> SKNode {
     return messageFactory(rect: rect, text: "Turn ended! Tap to try again.")
 }
 
-func gameOverFactory(rect: CGRect) -> SKNode {
+func gameOverFactory(_ rect: CGRect) -> SKNode {
     return messageFactory(rect: rect, text: "Game Over! Tap to play again.")
 }
 
-func calcScore(node: SKShapeNode) -> Int {
+func calcScore(_ node: SKShapeNode) -> Int {
     return node.fillColor == UIColor.yellow
         ? 1
         : node.fillColor == UIColor.green
@@ -225,14 +224,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     func setupGame() {
         self.game = GameState()
         
-        let nodes = sceneFactory(rect: self.frame)
+        let nodes = sceneFactory(self.frame)
         nodes.forEach{ self.addChild($0) }
     }
     
     func startGame() {
-        let ball = self.childNode(withName: "ball")
-        ball?.position = ballStart
-        ball?.physicsBody?.applyImpulse(ballSpeed)
+        let ball = ballFactory()
+        self.addChild(ball)
+        ball.physicsBody?.applyImpulse(ballSpeed)
         
         let label = self.childNode(withName: "message")
         label?.removeFromParent()
@@ -270,7 +269,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             : nil
         
         if (brick != nil) {
-            self.game.score += calcScore(node: brick!)
+            self.game.score += calcScore(brick!)
             brick?.removeFromParent()
         }
 
@@ -280,18 +279,18 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             ? contact.bodyB.node
             : nil
         
-        if (gap != nil) {
+        if (gap != nil && self.game.started) {
             self.game.started = false
 
             // stop the ball
             let ball = self.childNode(withName: "ball")
-            ball?.physicsBody?.velocity = CGVector(dx: 0, dy: 0)
+            ball?.removeFromParent()
             
             self.game.gameOver = self.game.turnsLeft == 1
             
             let label = self.game.gameOver
-                ? gameOverFactory(rect: self.frame)
-                : turnOverFactory(rect: self.frame)
+                ? gameOverFactory(self.frame)
+                : turnOverFactory(self.frame)
             self.addChild(label)
 
             self.game.turnsLeft -= 1
