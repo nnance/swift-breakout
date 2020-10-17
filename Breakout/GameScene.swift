@@ -6,17 +6,41 @@
 //  Copyright © 2020 Nick Nance. All rights reserved.
 //
 
+/*
+ Requirements:
+ 
+* 1) Breakout begins with eight rows of bricks, with each two rows a different color.
+* 2) The color order from the bottom up is yellow, green, orange and red.
+* 3) There is a single ball
+* 4) Bricks are elminated when the ball hits them
+* 5) If the player's paddle misses the ball's rebound, they will lose a turn.
+* 6) The player has a total of three turns
+ 7) To clear two screens of bricks
+* 8) Yellow bricks earn one point each, green bricks earn three points, orange bricks earn five points and the top-level red bricks score seven points each.
+ 9) The paddle shrinks to one-half its size after the ball has broken through the red row and hit the upper wall.
+ 10) Ball speed increases at specific intervals: after four hits, after twelve hits, and after making contact with the orange and red rows.
+ 
+ */
+
 import SpriteKit
 import GameplayKit
 
 // game constants to easily adjust game settings
 let showPhysics = false
+let maxTurns = 3
+enum scoring: Int {
+    case yellow = 1
+    case green = 3
+    case orange = 5
+    case red = 7
+}
 let paddleSize = CGSize(width: 80, height: 20)
 let brickSize = CGSize(width: 54, height: 20)
 let brickSpacing = 4
 let wallOffset = 200
-let ballSpeed = CGVector(dx: 10, dy: 10)
 let ballStart = CGPoint(x: -100, y: -100)
+let ballSpeed = 5
+let ballSpeedInc = 1
 
 enum ColliderType: UInt32 {
     case Ball = 1
@@ -148,6 +172,19 @@ func rowFactory(rect: CGRect, row: Int, color: UIColor) -> [SKNode] {
     return bricks
 }
 
+func brickWallFactory(_ rect: CGRect) -> [[SKNode]] {
+    return [
+        rowFactory(rect: rect, row: 1, color: UIColor.red),
+        rowFactory(rect: rect, row: 2, color: UIColor.red),
+        rowFactory(rect: rect, row: 3, color: UIColor.orange),
+        rowFactory(rect: rect, row: 4, color: UIColor.orange),
+        rowFactory(rect: rect, row: 5, color: UIColor.green),
+        rowFactory(rect: rect, row: 6, color: UIColor.green),
+        rowFactory(rect: rect, row: 7, color: UIColor.yellow),
+        rowFactory(rect: rect, row: 8, color: UIColor.yellow)
+    ]
+}
+
 func scoreFactory(_ rect: CGRect) -> SKLabelNode {
     let scoreLabel = SKLabelNode()
     scoreLabel.name = "score"
@@ -159,16 +196,7 @@ func scoreFactory(_ rect: CGRect) -> SKLabelNode {
 }
 
 func sceneFactory(_ rect: CGRect) -> [SKNode] {
-    let rows = [
-        rowFactory(rect: rect, row: 1, color: UIColor.red),
-        rowFactory(rect: rect, row: 2, color: UIColor.red),
-        rowFactory(rect: rect, row: 3, color: UIColor.orange),
-        rowFactory(rect: rect, row: 4, color: UIColor.orange),
-        rowFactory(rect: rect, row: 5, color: UIColor.green),
-        rowFactory(rect: rect, row: 6, color: UIColor.green),
-        rowFactory(rect: rect, row: 7, color: UIColor.yellow),
-        rowFactory(rect: rect, row: 8, color: UIColor.yellow)
-    ]
+    let rows = brickWallFactory(rect)
     
     let nodes = [
         leftWallFactory(rect),
@@ -202,18 +230,18 @@ func gameOverFactory(_ rect: CGRect) -> SKNode {
 
 func calcScore(_ node: SKShapeNode) -> Int {
     return node.fillColor == UIColor.yellow
-        ? 1
+        ? scoring.yellow.rawValue
         : node.fillColor == UIColor.green
-        ? 3
+        ? scoring.green.rawValue
         : node.fillColor == UIColor.orange
-        ? 5
-        : 7  // red
+        ? scoring.orange.rawValue
+        : scoring.red.rawValue
 }
 
 struct GameState {
     var started = false
     var gameOver = false
-    var turnsLeft = 3
+    var turnsLeft = maxTurns
     var score = 0
 }
 
@@ -231,7 +259,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     func startGame() {
         let ball = ballFactory()
         self.addChild(ball)
-        ball.physicsBody?.applyImpulse(ballSpeed)
+        
+        let speed = CGVector(dx: ballSpeed, dy: ballSpeed)
+        ball.physicsBody?.applyImpulse(speed)
         
         let label = self.childNode(withName: "message")
         label?.removeFromParent()
