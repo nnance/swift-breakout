@@ -40,7 +40,7 @@ let brickSpacing = 4
 let wallOffset = 200
 let ballStart = CGPoint(x: -100, y: -100)
 let ballSpeed = 5
-let ballSpeedInc = 30
+let ballSpeedInc = 100
 
 enum ColliderType: UInt32 {
     case Ball = 1
@@ -77,6 +77,64 @@ func paddleFactory(_ rect: CGRect) -> SKNode {
     paddle.physicsBody = physicsBody
     
     return paddle
+}
+
+class Ball: SKShapeNode {
+    var hitCount = 0
+    var hasHitOrange = false
+    var hasHitRed = false
+    
+    override init() {
+        let radius = CGFloat(10)
+        
+        let physicsBody = SKPhysicsBody(circleOfRadius: radius)
+        physicsBody.allowsRotation = false
+        physicsBody.affectedByGravity = false
+        physicsBody.friction = 0
+        physicsBody.restitution = 1
+        physicsBody.linearDamping = 0
+        physicsBody.angularDamping = 0
+        
+        super.init()
+        self.name = "ball"
+        self.path = SKShapeNode(circleOfRadius: radius).path
+        self.position = ballStart
+        self.fillColor = UIColor.white
+        self.physicsBody = physicsBody
+    
+        setCollision(node: self, category: ColliderType.Ball, collision: ColliderType.Brick)
+    }
+    
+    required init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    /*
+    Ball speed increases at specific intervals: after four hits, after twelve hits, and after making contact with the orange and red rows.
+    */
+    func collisionHandler(_ contact: SKPhysicsContact) {
+        let brick = contact.bodyA.categoryBitMask == ColliderType.Brick.rawValue
+            ? contact.bodyA.node! as? SKShapeNode
+            : nil
+
+        let ball = contact.bodyB.categoryBitMask == ColliderType.Ball.rawValue
+            ? contact.bodyB.node as? Ball
+            : nil
+        
+        if ((ball != nil) && (brick != nil)) {
+            hitCount += 1
+
+            if hitCount == 4 || hitCount == 12 {
+                increaseSpeed(ball!)
+            } else if brick?.fillColor == UIColor.orange && !hasHitOrange {
+                hasHitOrange = true
+                increaseSpeed(ball!)
+            } else if brick?.fillColor == UIColor.red && !hasHitRed {
+                hasHitRed = true
+                increaseSpeed(ball!)
+            }
+        }
+    }
 }
 
 func ballFactory() -> SKNode {
@@ -259,34 +317,9 @@ func increaseSpeed(_ node: SKNode) {
     else if pb.velocity.dy > 0 { pb.velocity.dy += amount }
 }
 
-/*
-Ball speed increases at specific intervals: after four hits, after twelve hits, and after making contact with the orange and red rows.
-*/
-class BallSpeedHandler {
-    var speed = ballSpeed
-    var hitCount = 0
-    var hasHitOrange = false
-    var hasHitRed = false
-    
-    func hit(ball: SKShapeNode, brick: SKShapeNode) {
-        hitCount += 1
-
-        if hitCount == 4 || hitCount == 12 {
-            increaseSpeed(ball)
-        } else if brick.fillColor == UIColor.orange && !hasHitOrange {
-            hasHitOrange = true
-            increaseSpeed(ball)
-        } else if brick.fillColor == UIColor.red && !hasHitRed {
-            hasHitRed = true
-            increaseSpeed(ball)
-        }
-    }
-}
-
 class GameScene: SKScene, SKPhysicsContactDelegate {
-    
     var game = GameState()
-    var speedHandler = BallSpeedHandler()
+    var handlers: [(SKPhysicsContact) -> Void] = []
     
     func setupGame() {
         self.game = GameState()
@@ -296,9 +329,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     func startGame() {
-        let ball = ballFactory()
+        let ball = Ball()
+        self.handlers.append(ball.collisionHandler)
         self.addChild(ball)
-        speedHandler = BallSpeedHandler()
         
         let speed = CGVector(dx: ballSpeed, dy: ballSpeed)
         ball.physicsBody?.applyImpulse(speed)
@@ -332,21 +365,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func didBegin(_ contact: SKPhysicsContact) {
 
+        self.handlers.forEach({ $0(contact) })
+        
         let brick = contact.bodyA.categoryBitMask == ColliderType.Brick.rawValue
             ? contact.bodyA.node! as? SKShapeNode
-            : contact.bodyB.categoryBitMask == ColliderType.Brick.rawValue
-            ? contact.bodyB.node! as? SKShapeNode
             : nil
 
-        let ball = contact.bodyA.categoryBitMask == ColliderType.Ball.rawValue
-            ? contact.bodyA.node as? SKShapeNode
-            : contact.bodyB.categoryBitMask == ColliderType.Ball.rawValue
-            ? contact.bodyB.node as? SKShapeNode
-            : nil
-        
         if (brick != nil) {
             self.game.score += calcScore(brick!)
-            self.speedHandler.hit(ball: ball!, brick: brick!)
             brick?.removeFromParent()
         }
 
