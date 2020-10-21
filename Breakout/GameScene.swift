@@ -17,8 +17,8 @@
 * 6) The player has a total of three turns
  7) To clear two screens of bricks
 * 8) Yellow bricks earn one point each, green bricks earn three points, orange bricks earn five points and the top-level red bricks score seven points each.
- 9) The paddle shrinks to one-half its size after the ball has broken through the red row and hit the upper wall.
- 10) Ball speed increases at specific intervals: after four hits, after twelve hits, and after making contact with the orange and red rows.
+* 9) The paddle shrinks to one-half its size after the ball has broken through the red row and hit the upper wall.
+ * 10) Ball speed increases at specific intervals: after four hits, after twelve hits, and after making contact with the orange and red rows.
  
  */
 
@@ -46,7 +46,7 @@ enum ColliderType: UInt32 {
     case Ball = 1
     case Paddle = 2
     case Brick = 4
-    case Gap = 8
+    case Wall = 8
 }
 
 struct GameState {
@@ -57,6 +57,7 @@ struct GameState {
     var hitCount = 0
     var hasHitOrange = false
     var hasHitRed = false
+    var hasHitTop = false
     var nodesToRemove = [SKNode]()
     var nodesToAdd = [SKNode]()
 }
@@ -64,10 +65,10 @@ struct GameState {
 func setCollision(node: SKNode, category: ColliderType, collision: ColliderType) {
     node.physicsBody?.categoryBitMask = category.rawValue
     node.physicsBody?.contactTestBitMask = collision.rawValue
-    node.physicsBody?.collisionBitMask = collision.rawValue
+//    node.physicsBody?.collisionBitMask = collision.rawValue
 }
 
-func paddleFactory(_ rect: CGRect) -> SKNode {
+func paddleFactory(pos: CGPoint, paddleSize: CGSize) -> SKNode {
     let physicsBody = SKPhysicsBody(rectangleOf: paddleSize)
     physicsBody.isDynamic = false
     physicsBody.allowsRotation = false
@@ -77,11 +78,15 @@ func paddleFactory(_ rect: CGRect) -> SKNode {
     
     let paddle = SKShapeNode(rectOf: paddleSize)
     paddle.name = "paddle"
-    paddle.position = CGPoint(x: 0, y: -rect.maxY + 150)
+    paddle.position = pos
     paddle.fillColor = UIColor.white
     paddle.physicsBody = physicsBody
     
     return paddle
+}
+
+func paddleFactory(_ rect: CGRect) -> SKNode {
+    return paddleFactory(pos: CGPoint(x: 0, y: -rect.maxY + 150), paddleSize: paddleSize)
 }
 
 func ballFactory() -> SKNode {
@@ -99,8 +104,6 @@ func ballFactory() -> SKNode {
     ball.fillColor = UIColor.white
     ball.physicsBody = physicsBody
     
-    setCollision(node: ball, category: ColliderType.Ball, collision: ColliderType.Brick)
-    
     return ball
 }
 
@@ -116,6 +119,8 @@ func wallFactory(_ rect: CGRect) -> SKShapeNode {
 
     let wall = SKShapeNode(rect: rect)
     wall.physicsBody = physicsBody
+    
+    setCollision(node: wall, category: ColliderType.Wall, collision: ColliderType.Ball)
 
     return wall
 }
@@ -132,22 +137,16 @@ func rightWallFactory(_ rect: CGRect) -> SKShapeNode {
 
 func topWallFactory(_ rect: CGRect) -> SKShapeNode {
     let rect = CGRect(x: rect.minX, y: rect.maxY, width: rect.maxX * 2, height: 1)
-    return wallFactory(rect)
+    let wall = wallFactory(rect)
+    wall.name = "top"
+    return wall
 }
 
 // fix the collision handling by fixing the bit mask but make it the same as the other walls
 func bottomWallFactory(_ rect: CGRect) -> SKNode {
     let rect = CGRect(x: rect.minX, y: rect.minY, width: rect.maxX * 2, height: 1)
-    
-    let physicsBody = SKPhysicsBody(edgeLoopFrom: rect)
-    physicsBody.isDynamic = false
-    physicsBody.categoryBitMask = ColliderType.Gap.rawValue
-    physicsBody.contactTestBitMask = ColliderType.Ball.rawValue
-    physicsBody.collisionBitMask = ColliderType.Ball.rawValue
-    
-    let wall = SKShapeNode(rect: rect)
-    wall.physicsBody = physicsBody
-
+    let wall = wallFactory(rect)
+    wall.name = "bottom"
     return wall
 }
 
@@ -157,12 +156,14 @@ func brickFactory(pos: CGPoint, color: UIColor) -> SKNode {
     brick.fillColor = color
     brick.strokeColor = color
     
-    brick.physicsBody = SKPhysicsBody(rectangleOf: brickSize)
-    brick.physicsBody?.isDynamic = false
-    brick.physicsBody?.allowsRotation = false
-    brick.physicsBody?.affectedByGravity = false
-    brick.physicsBody?.friction = 0
-    brick.physicsBody?.restitution = 0
+    let physicsBody = SKPhysicsBody(rectangleOf: brickSize)
+    physicsBody.isDynamic = false
+    physicsBody.allowsRotation = false
+    physicsBody.affectedByGravity = false
+    physicsBody.friction = 0
+    physicsBody.restitution = 0
+    
+    brick.physicsBody = physicsBody
 
     setCollision(node: brick, category: ColliderType.Brick, collision: ColliderType.Ball)
     
@@ -227,7 +228,7 @@ func messageFactory(rect: CGRect, text: String) -> SKNode {
     let label = SKLabelNode()
     label.name = "message"
     label.fontName = "Helvetica"
-    label.fontSize = 30
+    label.fontSize = 40
     label.text = text
     label.position = CGPoint(x: rect.midX, y: rect.midY)
     return label
@@ -271,23 +272,46 @@ func increaseSpeed(_ node: SKNode) {
  
  */
 
-/*
-Ball speed increases at specific intervals: after four hits, after twelve hits, and after making contact with the orange and red rows.
-*/
-func ballCollisionHandler(contact: SKPhysicsContact, state: GameState) -> GameState {
-    var results = state
-    
-    let brick = contact.bodyA.categoryBitMask == ColliderType.Brick.rawValue
+func getBrick(_ contact: SKPhysicsContact) -> SKShapeNode? {
+    return contact.bodyA.categoryBitMask == ColliderType.Brick.rawValue
         ? contact.bodyA.node as? SKShapeNode
         : contact.bodyB.categoryBitMask == ColliderType.Brick.rawValue
         ? contact.bodyB.node as? SKShapeNode
         : nil
+}
 
-    let ball = contact.bodyA.categoryBitMask == ColliderType.Ball.rawValue
+func getBall(_ contact: SKPhysicsContact) -> SKShapeNode? {
+    return contact.bodyA.node?.name == "ball"
         ? contact.bodyA.node as? SKShapeNode
-        : contact.bodyB.categoryBitMask == ColliderType.Ball.rawValue
+        : contact.bodyB.node?.name == "ball"
         ? contact.bodyB.node as? SKShapeNode
         : nil
+}
+
+func getBottom(_ contact: SKPhysicsContact) -> SKShapeNode? {
+    return contact.bodyA.node?.name == "bottom"
+        ? contact.bodyA.node as? SKShapeNode
+        : contact.bodyB.node?.name == "bottom"
+        ? contact.bodyB.node as? SKShapeNode
+        : nil
+}
+
+func getTop(_ contact: SKPhysicsContact) -> SKShapeNode? {
+    return contact.bodyA.node?.name == "top"
+        ? contact.bodyA.node as? SKShapeNode
+        : contact.bodyB.node?.name == "top"
+        ? contact.bodyB.node as? SKShapeNode
+        : nil
+}
+
+/*
+Ball speed increases at specific intervals: after four hits, after twelve hits, and after making contact with the orange and red rows.
+*/
+func ballCollisionHandler(contact: SKPhysicsContact, nodes: [SKNode], state: GameState) -> GameState {
+    var results = state
+    
+    let brick = getBrick(contact)
+    let ball = getBall(contact)
     
     if ((ball != nil) && (brick != nil)) {
         results.hitCount += 1
@@ -309,12 +333,10 @@ func ballCollisionHandler(contact: SKPhysicsContact, state: GameState) -> GameSt
 /*
 Yellow bricks earn one point each, green bricks earn three points, orange bricks earn five points and the top-level red bricks score seven points each.
  */
-func brickCollisionHandler(contact: SKPhysicsContact, state: GameState) -> GameState {
+func brickCollisionHandler(contact: SKPhysicsContact, nodes: [SKNode],state: GameState) -> GameState {
     var result = state
 
-    let brick = contact.bodyA.categoryBitMask == ColliderType.Brick.rawValue
-        ? contact.bodyA.node! as? SKShapeNode
-        : nil
+    let brick = getBrick(contact)
 
     if (brick != nil) {
         result.score += calcScore(brick!)
@@ -324,23 +346,14 @@ func brickCollisionHandler(contact: SKPhysicsContact, state: GameState) -> GameS
     return result
 }
 
-func gapCollisionHandler(_ frame: CGRect) -> (SKPhysicsContact, GameState) -> GameState {
-    func handler(contact: SKPhysicsContact, state: GameState) -> GameState {
+func bottomCollisionHandler(_ frame: CGRect) -> (SKPhysicsContact, [SKNode],GameState) -> GameState {
+    func handler(contact: SKPhysicsContact, nodes: [SKNode], state: GameState) -> GameState {
         var results = state
         
-        let gap = contact.bodyA.categoryBitMask == ColliderType.Gap.rawValue
-            ? contact.bodyA.node
-            : contact.bodyB.categoryBitMask == ColliderType.Gap.rawValue
-            ? contact.bodyB.node
-            : nil
+        let wall = getBottom(contact)
+        let ball = getBall(contact)
         
-        let ball = contact.bodyA.categoryBitMask == ColliderType.Ball.rawValue
-            ? contact.bodyA.node
-            : contact.bodyB.categoryBitMask == ColliderType.Ball.rawValue
-            ? contact.bodyB.node
-            : nil
-        
-        if (gap != nil && ball != nil && results.started) {
+        if (wall != nil && ball != nil && results.started) {
             results.started = false
 
             // stop the ball
@@ -365,10 +378,36 @@ func gapCollisionHandler(_ frame: CGRect) -> (SKPhysicsContact, GameState) -> Ga
     return handler
 }
 
+/*
+The paddle shrinks to one-half its size after the ball has broken through the red row and hit the upper wall.
+ */
+
+func topWallCollisionHandler(contact: SKPhysicsContact, nodes: [SKNode], state: GameState) -> GameState {
+    var results = state
+
+    let wall = getTop(contact)
+
+    if (wall != nil && wall?.name == "top" && !results.hasHitTop) {
+        let paddle = nodes.first(where: { $0.name == "paddle" })
+        let size = CGSize(width: paddleSize.width / 2, height: paddleSize.height)
+        let smallPaddle = paddleFactory(pos: paddle!.position, paddleSize: size)
+        results.nodesToRemove.append(paddle!)
+        results.nodesToAdd.append(smallPaddle)
+        results.hasHitTop = true
+    }
+    return results
+}
+
+/*
+ 
+ Collision Handlers end
+ 
+ */
+
 class GameScene: SKScene, SKPhysicsContactDelegate {
     var game = GameState()
 
-    var handlers = [(SKPhysicsContact, GameState) -> GameState]()
+    var handlers = [(SKPhysicsContact, [SKNode], GameState) -> GameState]()
     
     func setupGame() {
         self.view?.showsPhysics = showPhysics
@@ -379,7 +418,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         self.handlers = [
             ballCollisionHandler,
             brickCollisionHandler,
-            gapCollisionHandler(self.frame)
+            topWallCollisionHandler,
+            bottomCollisionHandler(self.frame)
         ]
 
 
@@ -420,7 +460,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     func didBegin(_ contact: SKPhysicsContact) {
-        self.handlers.forEach({ self.game = $0(contact, self.game) })
+        self.handlers.forEach({ self.game = $0(contact, self.children, self.game) })
     }
 
     
