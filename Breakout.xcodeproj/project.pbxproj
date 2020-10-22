@@ -16,6 +16,7 @@
 		005A57B1252EC57C0059AF83 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 005A57B0252EC57C0059AF83 /* Assets.xcassets */; };
 		005A57B4252EC57C0059AF83 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 005A57B2252EC57C0059AF83 /* LaunchScreen.storyboard */; };
 		005A57BF252EC57C0059AF83 /* BreakoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005A57BE252EC57C0059AF83 /* BreakoutTests.swift */; };
+		00A126BA254095BA00C8BB07 /* CollisionHandlers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00A126B9254095BA00C8BB07 /* CollisionHandlers.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -42,6 +43,7 @@
 		005A57BA252EC57C0059AF83 /* BreakoutTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BreakoutTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		005A57BE252EC57C0059AF83 /* BreakoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakoutTests.swift; sourceTree = "<group>"; };
 		005A57C0252EC57C0059AF83 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		00A126B9254095BA00C8BB07 /* CollisionHandlers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollisionHandlers.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -87,6 +89,7 @@
 				005A57A5252EC57A0059AF83 /* GameScene.sks */,
 				005A57A7252EC57A0059AF83 /* Actions.sks */,
 				005A57A9252EC57A0059AF83 /* GameScene.swift */,
+				00A126B9254095BA00C8BB07 /* CollisionHandlers.swift */,
 				005A57AB252EC57A0059AF83 /* GameViewController.swift */,
 				005A57AD252EC57A0059AF83 /* Main.storyboard */,
 				005A57B0252EC57C0059AF83 /* Assets.xcassets */,
@@ -211,6 +214,7 @@
 				005A57AA252EC57A0059AF83 /* GameScene.swift in Sources */,
 				005A57AC252EC57A0059AF83 /* GameViewController.swift in Sources */,
 				005A57A4252EC57A0059AF83 /* AppDelegate.swift in Sources */,
+				00A126BA254095BA00C8BB07 /* CollisionHandlers.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
