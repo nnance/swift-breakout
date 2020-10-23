@@ -18,7 +18,7 @@
  7) To clear two screens of bricks
 * 8) Yellow bricks earn one point each, green bricks earn three points, orange bricks earn five points and the top-level red bricks score seven points each.
 * 9) The paddle shrinks to one-half its size after the ball has broken through the red row and hit the upper wall.
- * 10) Ball speed increases at specific intervals: after four hits, after twelve hits, and after making contact with the orange and red rows.
+* 10) Ball speed increases at specific intervals: after four hits, after twelve hits, and after making contact with the orange and red rows.
  
  */
 
@@ -36,12 +36,14 @@ enum scoring: Int {
 }
 let ballSize = CGFloat(8)
 let paddleSize = CGSize(width: 60, height: 20)
-let brickSize = CGSize(width: 45, height: 20)
+let brickSize = CGSize(width: 49, height: 20)
 let brickSpacing = 4
+let rowOffset = CGFloat(5)
 let wallOffset = 200
 let ballStart = CGPoint(x: -100, y: -100)
 let ballSpeed = 3
 let ballSpeedInc = 100
+let wallSize = CGFloat(1)
 
 struct GameState {
     var started = false
@@ -122,22 +124,22 @@ func wallFactory(_ rect: CGRect, name: String) -> SKShapeNode {
 }
 
 func leftWallFactory(_ rect: CGRect) -> SKShapeNode {
-    let rect = CGRect(x: rect.minX, y: rect.maxY, width: 1, height: rect.minY * 2)
+    let rect = CGRect(x: rect.minX, y: rect.maxY, width: -wallSize, height: rect.minY * 2)
     return wallFactory(rect, name: "left")
 }
 
 func rightWallFactory(_ rect: CGRect) -> SKShapeNode {
-    let rect = CGRect(x: rect.maxX, y: rect.maxY, width: 1, height: rect.minY * 2)
+    let rect = CGRect(x: rect.maxX, y: rect.maxY, width: wallSize, height: rect.minY * 2)
     return wallFactory(rect, name: "right")
 }
 
 func topWallFactory(_ rect: CGRect) -> SKShapeNode {
-    let rect = CGRect(x: rect.minX, y: rect.maxY, width: rect.maxX * 2, height: 1)
+    let rect = CGRect(x: rect.minX, y: rect.maxY, width: rect.maxX * 2, height: -wallSize)
     return wallFactory(rect, name: "top")
 }
 
 func bottomWallFactory(_ rect: CGRect) -> SKShapeNode {
-    let rect = CGRect(x: rect.minX, y: rect.minY, width: rect.maxX * 2, height: 1)
+    let rect = CGRect(x: rect.minX, y: rect.minY, width: rect.maxX * 2, height: wallSize)
     return wallFactory(rect, name: "bottom")
 }
 
@@ -162,7 +164,6 @@ func brickFactory(pos: CGPoint, color: UIColor) -> SKNode {
     return brick
 }
 
-//TODO: adjust brick width based on device width
 func rowFactory(rect: CGRect, row: Int, color: UIColor) -> [SKNode] {
     var bricks: [SKNode] = []
     
@@ -170,7 +171,7 @@ func rowFactory(rect: CGRect, row: Int, color: UIColor) -> [SKNode] {
     let brickHeight = Int(brickSize.height)
     
     for idx in 0...13 {
-        let x = -rect.maxX + CGFloat(brickWidth * idx + brickSpacing * idx + brickWidth / 2)
+        let x = -rect.maxX + CGFloat(brickWidth * idx + brickSpacing * idx + brickWidth / 2) + rowOffset
         let y = rect.maxY - CGFloat(brickHeight * row + brickSpacing * row + wallOffset)
         bricks.append(brickFactory(pos: CGPoint(x: x, y: y), color: color))
     }
