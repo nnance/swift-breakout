@@ -18,8 +18,6 @@ enum ColliderType: UInt32 {
 }
 
 func increaseSpeed(_ node: SKNode) {
-    print("increase speed")
-
     guard let pb = node.physicsBody else { fatalError() }
 
     let amount = CGFloat(ballSpeedInc)

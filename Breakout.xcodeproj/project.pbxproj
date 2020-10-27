@@ -44,6 +44,7 @@
 		005A57BE252EC57C0059AF83 /* BreakoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakoutTests.swift; sourceTree = "<group>"; };
 		005A57C0252EC57C0059AF83 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		00A126B9254095BA00C8BB07 /* CollisionHandlers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollisionHandlers.swift; sourceTree = "<group>"; };
+		00A126C92548648700C8BB07 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -67,6 +68,7 @@
 		005A5797252EC57A0059AF83 = {
 			isa = PBXGroup;
 			children = (
+				00A126C92548648700C8BB07 /* README.md */,
 				005A57A2252EC57A0059AF83 /* Breakout */,
 				005A57BD252EC57C0059AF83 /* BreakoutTests */,
 				005A57A1252EC57A0059AF83 /* Products */,
