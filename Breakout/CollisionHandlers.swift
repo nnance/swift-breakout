@@ -73,6 +73,45 @@ func getTop(_ contact: SKPhysicsContact) -> SKShapeNode? {
         : nil
 }
 
+func paddleFactory(pos: CGPoint, paddleSize: CGSize) -> SKNode {
+    let physicsBody = SKPhysicsBody(rectangleOf: paddleSize)
+    physicsBody.isDynamic = false
+    physicsBody.allowsRotation = false
+    physicsBody.affectedByGravity = false
+    physicsBody.friction = 0
+    physicsBody.restitution = 0
+    
+    let paddle = SKShapeNode(rectOf: paddleSize)
+    paddle.name = "paddle"
+    paddle.position = pos
+    paddle.fillColor = UIColor.white
+    paddle.physicsBody = physicsBody
+    
+    return paddle
+}
+
+func messageFactory(rect: CGRect, text: String) -> SKNode {
+    let label = SKLabelNode()
+    label.name = "message"
+    label.fontName = "Helvetica"
+    label.fontSize = 40
+    label.text = text
+    label.position = CGPoint(x: rect.midX, y: rect.midY)
+    return label
+}
+
+func turnOverFactory(_ rect: CGRect) -> SKNode {
+    return messageFactory(rect: rect, text: "Turn ended! Tap to try again.")
+}
+
+func gameOverFactory(_ rect: CGRect) -> SKNode {
+    return messageFactory(rect: rect, text: "Game Over! Tap to play again.")
+}
+
+func levelOverFactory(_ rect: CGRect) -> SKNode {
+    return messageFactory(rect: rect, text: "Level Completed! Tap to continue.")
+}
+
 /*
 Ball speed increases at specific intervals: after four hits, after twelve hits, and after making contact with the orange and red rows.
 */
@@ -102,17 +141,35 @@ func ballCollisionHandler(contact: SKPhysicsContact, nodes: [SKNode], state: Gam
 /*
 Yellow bricks earn one point each, green bricks earn three points, orange bricks earn five points and the top-level red bricks score seven points each.
  */
-func brickCollisionHandler(contact: SKPhysicsContact, nodes: [SKNode], state: GameState) -> GameState {
-    var result = state
+func brickCollisionHandler(_ frame: CGRect) -> (SKPhysicsContact, [SKNode],GameState) -> GameState {
+    func handler(contact: SKPhysicsContact, nodes: [SKNode], state: GameState) -> GameState {
+        var result = state
 
-    let brick = getBrick(contact)
+        let brick = getBrick(contact)
 
-    if (brick != nil) {
-        result.score += calcScore(brick!)
-        result.nodesToRemove.append(brick!)
+        if (brick != nil) {
+            result.score += calcScore(brick!)
+            result.nodesToRemove.append(brick!)
+            
+            let bricks = nodes.filter({ $0.name == "brick" })
+            
+            // level completed
+            if (bricks.count == 1) {
+                let levelOver = levelOverFactory(frame)
+                result.nodesToAdd.append(levelOver)
+                
+                let ball = nodes.first(where: { $0.name == "ball" })
+                result.nodesToRemove.append(ball!)
+                
+                result.level += 1
+                result.levelOver = true
+                result.started = false
+            }
+        }
+        
+        return result
     }
-    
-    return result
+    return handler
 }
 
 func bottomCollisionHandler(_ frame: CGRect) -> (SKPhysicsContact, [SKNode],GameState) -> GameState {
@@ -127,9 +184,6 @@ func bottomCollisionHandler(_ frame: CGRect) -> (SKPhysicsContact, [SKNode],Game
 
             // stop the ball
             results.nodesToRemove.append(ball!)
-            results.hitCount = 0
-            results.hasHitOrange = false
-            results.hasHitRed = false
             
             results.gameOver = results.turnsLeft == 1
             
@@ -160,8 +214,10 @@ func topWallCollisionHandler(contact: SKPhysicsContact, nodes: [SKNode], state: 
         let paddle = nodes.first(where: { $0.name == "paddle" })
         let size = CGSize(width: paddleSize.width / 2, height: paddleSize.height)
         let smallPaddle = paddleFactory(pos: paddle!.position, paddleSize: size)
-        results.nodesToRemove.append(paddle!)
-        results.nodesToAdd.append(smallPaddle)
+        
+//        results.nodesToRemove.append(paddle!)
+//        results.nodesToAdd.append(smallPaddle)
+        
         results.hasHitTop = true
     }
     return results

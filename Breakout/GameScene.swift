@@ -15,7 +15,7 @@
 * 4) Bricks are elminated when the ball hits them
 * 5) If the player's paddle misses the ball's rebound, they will lose a turn.
 * 6) The player has a total of three turns
- 7) To clear two screens of bricks
+* 7) To clear two screens of bricks
 * 8) Yellow bricks earn one point each, green bricks earn three points, orange bricks earn five points and the top-level red bricks score seven points each.
 * 9) The paddle shrinks to one-half its size after the ball has broken through the red row and hit the upper wall.
 * 10) Ball speed increases at specific intervals: after four hits, after twelve hits, and after making contact with the orange and red rows.
@@ -48,6 +48,7 @@ let wallSize = CGFloat(1)
 struct GameState {
     var started = false
     var gameOver = false
+    var levelOver = false
     var level = 1
     var turnsLeft = maxTurns
     var score = 0
@@ -63,23 +64,6 @@ func setCollision(node: SKNode, category: ColliderType, collision: ColliderType)
     node.physicsBody?.categoryBitMask = category.rawValue
     node.physicsBody?.contactTestBitMask = collision.rawValue
     node.physicsBody?.collisionBitMask = collision.rawValue
-}
-
-func paddleFactory(pos: CGPoint, paddleSize: CGSize) -> SKNode {
-    let physicsBody = SKPhysicsBody(rectangleOf: paddleSize)
-    physicsBody.isDynamic = false
-    physicsBody.allowsRotation = false
-    physicsBody.affectedByGravity = false
-    physicsBody.friction = 0
-    physicsBody.restitution = 0
-    
-    let paddle = SKShapeNode(rectOf: paddleSize)
-    paddle.name = "paddle"
-    paddle.position = pos
-    paddle.fillColor = UIColor.white
-    paddle.physicsBody = physicsBody
-    
-    return paddle
 }
 
 func paddleFactory(_ rect: CGRect) -> SKNode {
@@ -217,24 +201,6 @@ func sceneFactory(_ rect: CGRect) -> [SKNode] {
     return nodes + rows.flatMap{ $0 }
 }
 
-func messageFactory(rect: CGRect, text: String) -> SKNode {
-    let label = SKLabelNode()
-    label.name = "message"
-    label.fontName = "Helvetica"
-    label.fontSize = 40
-    label.text = text
-    label.position = CGPoint(x: rect.midX, y: rect.midY)
-    return label
-}
-
-func turnOverFactory(_ rect: CGRect) -> SKNode {
-    return messageFactory(rect: rect, text: "Turn ended! Tap to try again.")
-}
-
-func gameOverFactory(_ rect: CGRect) -> SKNode {
-    return messageFactory(rect: rect, text: "Game Over! Tap to play again.")
-}
-
 class GameScene: SKScene, SKPhysicsContactDelegate {
     var game = GameState()
 
@@ -248,7 +214,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 
         self.handlers = [
             ballCollisionHandler,
-            brickCollisionHandler,
+            brickCollisionHandler(self.frame),
             topWallCollisionHandler,
             bottomCollisionHandler(self.frame)
         ]
@@ -269,11 +235,22 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         label?.removeFromParent()
         
         self.game.started = true
+        self.game.hasHitOrange = false
+        self.game.hasHitRed = false
+        self.game.hasHitTop = false
+        self.game.hitCount = 0
     }
     
     func resetGame() {
         self.removeAllChildren()
         setupGame()
+        startGame()
+    }
+    
+    func levelStart(rect: CGRect) {
+        self.game.levelOver = false
+        let wall = brickWallFactory(rect)
+        wall.forEach{ $0.forEach{ self.game.nodesToAdd.append($0) } }
         startGame()
     }
     
@@ -297,7 +274,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         if (!self.game.gameOver) {
-            if (!self.game.started) {
+            if (self.game.levelOver) {
+                levelStart(rect: self.frame)
+            } else if (!self.game.started) {
                 startGame()
             } else {
                 moveWithTouches(touches: touches)
