@@ -213,8 +213,8 @@ func topWallCollisionHandler(contact: SKPhysicsContact, nodes: [SKNode], state: 
         let size = CGSize(width: paddleSize.width / 2, height: paddleSize.height)
         let smallPaddle = paddleFactory(pos: paddle!.position, paddleSize: size)
         
-//        results.nodesToRemove.append(paddle!)
-//        results.nodesToAdd.append(smallPaddle)
+        results.nodesToRemove.append(paddle!)
+        results.nodesToAdd.append(smallPaddle)
         
         results.hasHitTop = true
     }
